@@ -2,8 +2,9 @@ import { Request, Response } from "express"
 import { prisma } from "../lib/prisma.js"
 import { IncomingTransaction } from "../types/transaction.js"
 import { fraudCheck } from "../services/engine.js"
+import { broadcastTransaction } from "../websockets/websockets.js"
 
-
+console.log("DB URL:", process.env.DATABASE_URL)
 export const ingestTransaction = async (req: Request, res: Response) => {
   try {
     const data: IncomingTransaction = req.body
@@ -18,7 +19,6 @@ export const ingestTransaction = async (req: Request, res: Response) => {
       }
     })
 
-    // TEMP fraud analysis (we replace later)
     const fraudAnalysis = await fraudCheck(data.userId, data.country)
     const riskScore = fraudAnalysis.riskScore
     const flagged = fraudAnalysis.flagged
@@ -45,6 +45,8 @@ export const ingestTransaction = async (req: Request, res: Response) => {
       where: { userId: data.userId },
       data: { lastCountry: data.country }
     })
+
+    broadcastTransaction(transaction)
 
     res.json({
       message: "Transaction processed",
