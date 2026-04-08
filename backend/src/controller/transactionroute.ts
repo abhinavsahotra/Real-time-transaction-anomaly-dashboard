@@ -3,8 +3,24 @@ import { prisma } from "../lib/prisma.js"
 import { IncomingTransaction } from "../types/transaction.js"
 import { fraudCheck } from "../services/engine.js"
 import { broadcastTransaction } from "../websockets/websockets.js"
+import { getUserBehaviour } from "../services/behaviour.js"
 
 console.log("DB URL:", process.env.DATABASE_URL)
+
+export const getUserTransactions = async(userId: string, limit: number) => {
+  const getTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: limit
+    })
+    
+    return getTransactions;
+}
+
 export const ingestTransaction = async (req: Request, res: Response) => {
   try {
     const data: IncomingTransaction = req.body
@@ -19,7 +35,11 @@ export const ingestTransaction = async (req: Request, res: Response) => {
       }
     })
 
-    const fraudAnalysis = await fraudCheck(data.userId, data.country)
+    const last30txns = await getUserTransactions(data.userId, 30);
+    console.log(last30txns)
+    const userBehaviour = await getUserBehaviour(last30txns);
+
+    const fraudAnalysis = await fraudCheck(data, userBehaviour)
     const riskScore = fraudAnalysis.riskScore
     const flagged = fraudAnalysis.flagged
     const reasons: string[] = fraudAnalysis.reasons

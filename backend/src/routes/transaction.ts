@@ -2,6 +2,6 @@ import { Router } from "express";
 import { ingestTransaction } from "../controller/transactionroute.js"
 const router = Router();
 
-router.use("/", ingestTransaction);
+router.post("/", ingestTransaction);
 
 export default router
