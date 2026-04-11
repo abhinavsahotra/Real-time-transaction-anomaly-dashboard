@@ -4,8 +4,10 @@ import { IncomingTransaction } from "../types/transaction.js"
 import { fraudCheck } from "../services/engine.js"
 import { broadcastTransaction } from "../websockets/websockets.js"
 import { getUserBehaviour } from "../services/behaviour.js"
+import { handleCase } from "../services/case.js"
 
 console.log("DB URL:", process.env.DATABASE_URL)
+
 
 export const getUserTransactions = async(userId: string, limit: number) => {
   const getTransactions = await prisma.transaction.findMany({
@@ -35,38 +37,49 @@ export const ingestTransaction = async (req: Request, res: Response) => {
       }
     })
 
-    const last30txns = await getUserTransactions(data.userId, 30);
-    console.log(last30txns)
-    const userBehaviour = await getUserBehaviour(last30txns);
-
-    const fraudAnalysis = await fraudCheck(data, userBehaviour)
-    const riskScore = fraudAnalysis.riskScore
-    const flagged = fraudAnalysis.flagged
-    const reasons: string[] = fraudAnalysis.reasons
-
     // SAVE TRANSACTION
     const transaction = await prisma.transaction.create({
       data: {
         transactionId: data.transactionId,
-        userId: data.userId,
+        userId: user.id,
         amount: data.amount,
         currency: data.currency,
         country: data.country,
         ip: data.ip,
         timestamp: new Date(data.timestamp),
-        riskScore,
-        flagged,
-        reasons
       }
     })
 
-    // UPDATE USER LAST COUNTRY
-    await prisma.user.update({
-      where: { userId: data.userId },
-      data: { lastCountry: data.country }
-    })
-
     broadcastTransaction(transaction)
+
+    const last30txns = await getUserTransactions(user.id, 30);
+    console.log(last30txns)
+    const userBehaviour = await getUserBehaviour(last30txns);
+
+    const fraudAnalysis = await fraudCheck(data, userBehaviour)
+    const riskScore = fraudAnalysis.riskScore
+
+    if(riskScore > 50) 
+      try {
+          await handleCase(fraudAnalysis, user.id)  
+      } catch (error) {
+        console.log(error)
+        res.status(500).json({
+          "message": "Error during Alert/Case creation"
+        })
+      }
+
+    else {
+      await prisma.user.update({
+        where: { userId: data.userId },
+        data: { lastCountry: data.country },
+      })
+
+      const updatedTransaction = await prisma.transaction.update({
+        where: {id: transaction.id},
+        data: {status: "SUCCESS"}
+      })
+    }
 
     res.json({
       message: "Transaction processed",

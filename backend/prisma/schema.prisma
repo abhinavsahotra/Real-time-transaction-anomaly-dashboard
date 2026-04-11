@@ -13,13 +13,15 @@ datasource db {
 }
 
 model User {
-  id     String @id @default(uuid())
-  userId String @unique
-  lastCountry  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  lastCountry   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  transactions Transaction[]
+  transactions  Transaction[]
+  alerts        Alert[]
+  case          Case?
 }
 
 model Transaction {
@@ -30,6 +32,7 @@ model Transaction {
   currency      String
   country       String
   ip            String
+  status        TransactionStatus @default(PENDING)
   timestamp     DateTime
 
   // fraud analysis results
@@ -39,8 +42,61 @@ model Transaction {
 
   createdAt     DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [id])
+
+  caseId        String?
+  case Case? @relation(fields: [caseId], references: [id])
+
+  alerts Alert[]
 
   @@index([userId])
   @@index([timestamp])
+}
+
+model Case {
+  id            String     @id @default(uuid())
+  caseId        String     @default(uuid())
+  notes         String[]   @default([])
+  status        CaseStatus @default(OPEN)
+  totalRiskScore Int     @default(0)
+
+  userId        String     @unique
+  user          User       @relation(fields: [userId], references: [id])
+
+  alert         Alert[]
+  transaction   Transaction[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())
+}
+
+model Alert {
+  id            String     @id @default(uuid())
+  alertId       Int        @unique @default(autoincrement())
+  riskScore     Int
+  reasons       String[]
+
+  userId        String
+  user          User       @relation(fields: [userId], references: [id])
+
+  caseId        String
+  case          Case      @relation(fields: [caseId], references: [id])
+
+  transactionId String     @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  createdAt     DateTime   @default(now())
+
+  @@index([userId])
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+}
+
+enum CaseStatus {
+  OPEN
+  UNDER_REVIEW
+  CLOSED
 }

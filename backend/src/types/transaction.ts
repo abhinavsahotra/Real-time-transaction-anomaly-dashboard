@@ -28,3 +28,9 @@ export interface userbehaviour {
   maxAmount: number
   countriesUsed: string[]
 }
+
+export interface fraudAnalysis {
+  riskScore: number,
+  reasons: string[]
+  flagged: boolean
+}
