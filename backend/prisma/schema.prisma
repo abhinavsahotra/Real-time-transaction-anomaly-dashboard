@@ -36,7 +36,7 @@ model Transaction {
   timestamp     DateTime
 
   // fraud analysis results
-  riskScore     Int      @default(0)
+  riskScore     Int?      
   flagged       Boolean  @default(false)
   reasons       String[]
 
@@ -92,6 +92,7 @@ model Alert {
 }
 
 enum TransactionStatus {
+  FLAGGED
   PENDING
   SUCCESS
 }

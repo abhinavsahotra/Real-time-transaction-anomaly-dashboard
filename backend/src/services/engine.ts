@@ -33,7 +33,6 @@ export const fraudCheck = async(data: IncomingTransaction, userBehaviour: userbe
 
   const flagged = (riskScore >= 50) ? true : false
 
-  console.log({riskScore, reasons, flagged})
   return {
     riskScore,
     reasons,

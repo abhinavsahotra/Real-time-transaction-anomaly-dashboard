@@ -1,8 +1,8 @@
 import "dotenv/config" 
 import express from "express"
-import transactionRoutes from "./routes/transaction.js"
-import investigationRoutes from "./routes/transaction.js"
+import routes from "./routes/index.js"
 import http from "http"
+import cors from "cors"
 import { initWebSocket } from "./websockets/websockets.js"
 
 const app = express();
@@ -10,9 +10,9 @@ const server = http.createServer(app);
 
 initWebSocket(server);
 app.use(express.json())
+app.use(cors())
 
-app.use("/transactions", transactionRoutes)
-app.use("/investigation", investigationRoutes)
+app.use("/", routes)
 
 app.get("/", (req, res) => {
     res.json({

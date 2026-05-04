@@ -17,7 +17,7 @@ export interface getTransactions {
     country: string;
     ip: string;
     timestamp: Date;
-    riskScore: number;
+    riskScore: number | null;
     flagged: boolean;
     reasons: string[];
     createdAt: Date;
